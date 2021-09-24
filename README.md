@@ -1,0 +1,1 @@
+A simple api server to interact with cloudflare api, use for create domain and subdomain in cloudflare simple api server to interact with cloudflare api, use for create domain and subdomain in cloudflare
