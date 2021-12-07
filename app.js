@@ -16,19 +16,35 @@ var cf = require('cloudflare')({
   key: process.env.CLOUDFLARE_KEY
 });
 
-const  getZoneByName = async (zoneName) => {
+const getZoneByName = async (zoneName) => {
   const resp = await cf.zones.browse()
   // console.log(resp.result);
-  const result = resp.result.filter( zone => zone.name === zoneName )
+  const result = resp.result.filter(zone => zone.name === zoneName)
   // return resp.result;
   return result
 }
 
-const  getAllZones = async () => {
+const getAllZones = async () => {
   const resp = await cf.zones.browse()
   const result = resp.result.map((zone) => ({ id: zone.id, name: zone.name }))
   return result
 }
+
+const getAllDnsRecord = async (zone_id) => {
+  const resp = await cf.dnsRecords.browse(zone_id);
+  return resp;
+}
+
+const createDnsRecord = async (zone_id, record) => {
+  const resp = await cf.dnsRecords.add(zone_id, record);
+  return resp;
+}
+
+app.get('/dns-records', (req, res) => {
+  const zone_id = req.query.zone_id;
+  const records = getAllDnsRecord(zone_id);
+  res.send(records)
+})
 
 app.get('/', (req, res) => {
   res.send("wrong place")
@@ -57,6 +73,7 @@ app.post('/domains', async (req, res) => {
 
   res.send(result)
 });
+
 app.use(logger('dev'));
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
