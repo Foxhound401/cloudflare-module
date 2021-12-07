@@ -10,10 +10,19 @@ var dotenv = require('dotenv');
 
 dotenv.config()
 var app = express();
+// app.use(express.static(path.join(__dirname, "public"), { 
+//   extensions : ['html']
+// }));
+// app.set('view engine', 'jade');
+
+// var cf = require('cloudflare')({
+//   email: process.env.CLOUDFLARE_EMAIL,
+//   key: process.env.CLOUDFLARE_KEY
+// });
+
 
 var cf = require('cloudflare')({
-  email: process.env.CLOUDFLARE_EMAIL,
-  key: process.env.CLOUDFLARE_KEY
+  token: process.env.CLOUDFLARE_TOKEN
 });
 
 const getZoneByName = async (zoneName) => {
@@ -35,15 +44,52 @@ const getAllDnsRecord = async (zone_id) => {
   return resp;
 }
 
+
+const createDomains = [
+  "sso-danang",
+  "feedback-danang",
+  "blog-danang",
+  "location-danang",
+  "social-network-danang"
+];
+
+const eastplayers = "f8d0feb716e94c34ad5d016a57255ff3"
+const ip = "139.59.217.126";
+
 const createDnsRecord = async (zone_id, record) => {
-  const resp = await cf.dnsRecords.add(zone_id, record);
+
+  const resp = [];
+  await createDomains.forEach(async dm => {
+    try {
+      const record = {
+        type: "A",
+        name: `${dm}`,
+        content: `${ip}`,
+        ttl: 1,
+        proxied: true
+      }
+      console.log(record)
+      const create = await cf.dnsRecords.add(eastplayers, record);
+      resp.push(create);
+    } catch (error) {
+      console.log(error)
+      return error
+    }
+  });
+
   return resp;
 }
 
-app.get('/dns-records', (req, res) => {
+app.post('/dns-records', async (req, res) => {
   const zone_id = req.query.zone_id;
-  const records = getAllDnsRecord(zone_id);
+  const records = await createDnsRecord();
   res.send(records)
+});
+
+app.get('/dns-records', async (req, res) => {
+  const zone_id = req.query.zone_id;
+  const resp = await cf.dnsRecords.browse(zone_id)
+  res.send(resp)
 })
 
 app.get('/', (req, res) => {
@@ -74,11 +120,12 @@ app.post('/domains', async (req, res) => {
   res.send(result)
 });
 
-app.use(logger('dev'));
-app.use(express.json());
-app.use(express.urlencoded({ extended: false }));
-app.use(cookieParser());
 
+app.use(logger('dev'));
+// app.use(cookieParser());
+
+app.use(bodyParser.json());
+app.use(bodyParser.urlencoded({ extended: true }));
 
 // catch 404 and forward to error handler
 app.use(function(req, res, next) {
@@ -93,7 +140,8 @@ app.use(function(err, req, res, next) {
 
   // render the error page
   res.status(err.status || 500);
-  res.render('error');
+  res.send(err);
 });
+
 
 module.exports = app;
